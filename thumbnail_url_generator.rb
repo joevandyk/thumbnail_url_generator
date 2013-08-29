@@ -3,6 +3,9 @@ require 'active_support/core_ext'
 # Needs a lot of cleanup.
 module Rooster
   module ThumbnailGenerator
+    mattr_accessor :image_host
+    mattr_accessor :rails_host
+
     # Given a format string and the original width and height,
     # return a string like "300x200" representing the image width and height.
     def self.resize_to_string format_string, original_width, original_height
@@ -57,14 +60,16 @@ module Rooster
           # Keeping it until the old site is completely removed.
           size = Media.lookup_size(size)
         end
-        options[:width], options[:height] = resize(size, media.width, media.height)
+        width  = media.respond_to?(:width)  ? media.width  : nil
+        height = media.respond_to?(:height) ? media.height : nil
+        options[:width], options[:height] = resize(size, width, height)
         ActionController::Base.helpers.image_tag(image_url(media, size), options)
       end
     end
 
     # Generates the image size part of a thumbnail URL.
     # Like: w_230,h_230 or c_fill,w_230,h_230
-    def self.cloudinary_format size, media
+    def self.image_size_format size
       return "/original/" if size.blank?
 
       format_string = []
@@ -84,17 +89,9 @@ module Rooster
       "/" + format_string.join(',') + "/"
     end
 
-    def self.cloudinary_base_url media
-      if Rails.env.production?
-        "https://d3vjvsn2tynjug.cloudfront.net/v2"
-      else
-        "https://dev-images.tanga.com/v2"
-      end
-    end
-
     def self.s3_image_url media, size
-      url = cloudinary_base_url(media)
-      url << cloudinary_format(size, media)
+      url = image_host.dup
+      url << image_size_format(size)
 
       if media.class.to_s == 'Media' or media.class.to_s == "Hash"
         url << CGI.escape(media.url)
@@ -103,11 +100,11 @@ module Rooster
           # In the assets/images folder, asset pipeline has done stuff to it.
           path = path_to_image(media)
 
-          # I'm not sure why, but path_to_image sometimes doesn't return the complete
-          # URL to the image. Seems to only happen on Tanga in production.
-          if path !~ /^https/
-            path = Site.current.config.asset_host + path
+          # If path doesn't include http, add it.
+          if path !~ /^http/
+            path = rails_host + path
           end
+
           url << CGI.escape(path)
         else
           # In the public folder or an absolute URL.
@@ -125,7 +122,11 @@ module Rooster
     end
 
     def self.root_url
-      Rails.application.routes.url_helpers.root_url(:only_path => true)
+      self.rails_host
+    end
+
+    def self.path_to_image *args
+      ActionController::Base.helpers.path_to_image(*args)
     end
   end
 end
