@@ -62,7 +62,9 @@ module Rooster
         end
         width  = media.respond_to?(:width)  ? media.width  : nil
         height = media.respond_to?(:height) ? media.height : nil
-        options[:width], options[:height] = resize(size, width, height)
+        if size
+          options[:width], options[:height] = resize(size, width, height)
+        end
         ActionController::Base.helpers.image_tag(image_url(media, size), options)
       end
     end
