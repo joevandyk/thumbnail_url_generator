@@ -51,7 +51,7 @@ module Rooster
 
     # Given an image object and a size, create an image tag
     # for the thumbnail. options are passed to Rails's image tag.
-    def self.image_tag media, size, options={}
+    def self.image_tag media, size=nil, options={}
       if media.blank?
         return ""
       else
