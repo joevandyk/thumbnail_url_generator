@@ -95,7 +95,7 @@ module Rooster
       url = image_host.dup
       url << image_size_format(size)
 
-      if media.class.to_s == 'Media' or media.class.to_s == "Hash"
+      if media.class.to_s == 'Media' or media.kind_of?(Hash)
         url << CGI.escape(media.url)
       else
         if Rails.application.assets.find_asset(media)
